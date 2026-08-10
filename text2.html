@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masuk / Unggah - FireGameX MC</title>
+    <style>
+        * {margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif;}
+        body {min-height:100vh; background:linear-gradient(135deg,#ff1a1a,#ff8800); padding:15px;}
+        .kotak {max-width:480px; margin:20px auto; background:#fff; border-radius:15px; padding:25px; box-shadow:0 8px 25px rgba(0,0,0,0.25);}
+        h1 {color:#ff3300; text-align:center; margin-bottom:20px; font-size:26px;}
+        h2 {color:#ff4400; font-size:19px; margin:25px 0 15px; padding-bottom:8px; border-bottom:2px solid #ffddcc;}
+        .grup {margin-bottom:18px;}
+        label {display:block; margin-bottom:6px; font-weight:600; color:#222;}
+        input, textarea {width:100%; padding:11px; border:2px solid #ffb380; border-radius:8px; font-size:15px;}
+        input:focus, textarea:focus {outline:none; border-color:#ff4400;}
+        textarea {min-height:90px; resize:vertical;}
+        .pratinjau {width:100%; height:170px; border:2px dashed #ff7700; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#777; margin-bottom:8px; overflow:hidden; cursor:pointer; background:#fff8f2;}
+        .pratinjau img {width:100%; height:100%; object-fit:cover;}
+        button {width:100%; padding:13px; background:linear-gradient(90deg,#ff2222,#ff7700); color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; transition:0.2s;}
+        button:hover {transform:translateY(-1px); box-shadow:0 4px 12px rgba(255,34,34,0.3);}
+        input[type="file"] {display:none;}
+        .tombol-batal {background:#888; margin-top:8px;}
+        .tombol-pendek {width:auto; padding:10px 15px; margin-top:5px;}
+        .teks-pusat {text-align:center; margin-top:15px; font-size:14px;}
+        .teks-pusat a {color:#ff3300; font-weight:bold; cursor:pointer; text-decoration:underline;}
+        .nav-bawah {text-align:center; margin-top:15px;}
+        .nav-bawah a {color:#ff3300; font-weight:bold; text-decoration:none;}
+        .selamat-datang {display:flex; justify-content:space-between; align-items:center; background:#fff5f0; padding:12px; border-radius:8px; margin-bottom:20px;}
+        .selamat-datang span {font-weight:bold; color:#ff4400;}
+        .daftar-saya {margin-top:10px;}
+        .item-saya {display:flex; align-items:center; justify-content:space-between; padding:12px; background:#fff5f0; border-radius:8px; margin-bottom:10px;}
+        .info-saya {flex:1; margin-right:10px;}
+        .info-saya h4 {font-size:15px; color:#333; margin-bottom:2px;}
+        .info-saya p {font-size:13px; color:#666; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+        .tombol-kecil {width:auto; padding:8px 12px; font-size:13px; border-radius:6px; margin:0;}
+        .tombol-edit {background:#ff7700; margin-right:5px;}
+        .tombol-hapus {background:#ff2222;}
+        .halaman {display:none;}
+        .halaman.aktif {display:block;}
+    </style>
+</head>
+<body>
+    <div class="kotak">
+        <!-- HALAMAN LOGIN / DAFTAR -->
+        <div id="halamanAkun" class="halaman aktif">
+            <h1>🔐 Akses Halaman Unggah</h1>
+            
+            <div id="formLogin">
+                <div class="grup">
+                    <label>Nama Pengguna</label>
+                    <input type="text" id="loginNama" placeholder="Masukkan nama pengguna">
+                </div>
+                <div class="grup">
+                    <label>Kata Sandi</label>
+                    <input type="password" id="loginSandi" placeholder="Masukkan kata sandi">
+                </div>
+                <button id="btnMasuk">🔑 Masuk</button>
+                <div class="teks-pusat">
+                    Belum punya akun? <a onclick="tukarKeDaftar()">Daftar Sekarang</a>
+                </div>
+            </div>
+
+            <div id="formDaftar" style="display:none;">
+                <div class="grup">
+                    <label>Nama Pengguna Baru</label>
+                    <input type="text" id="daftarNama" placeholder="Minimal 3 huruf">
+                </div>
+                <div class="grup">
+                    <label>Kata Sandi Baru</label>
+                    <input type="password" id="daftarSandi" placeholder="Minimal 4 huruf">
+                </div>
+                <button id="btnDaftar">📝 Buat Akun</button>
+                <div class="teks-pusat">
+                    Sudah punya akun? <a onclick="tukarKeLogin()">Masuk Disini</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- HALAMAN UNGGAH & KELOLA -->
+        <div id="halamanUnggah" class="halaman">
+            <div class="selamat-datang">
+                <span>Halo, <span id="namaPengguna"></span>!</span>
+                <button class="tombol-kecil" onclick="keluarAkun()">🚪 Keluar</button>
+            </div>
+
+            <h1>📤 Unggah / Perbarui File</h1>
+            <input type="hidden" id="editId" value="">
+
+            <div class="grup">
+                <label>Foto Tampilan *</label>
+                <div class="pratinjau" id="areaFoto">Klik untuk pilih foto</div>
+                <input type="file" id="inputFoto" accept="image/*">
+            </div>
+
+            <div class="grup">
+                <label>Nama File *</label>
+                <input type="text" id="inputNama" placeholder="Contoh: Texture HD V3" required>
+            </div>
+
+            <div class="grup">
+                <label>Tautan Unduh (.mcpack/.zip) *</label>
+                <input type="url" id="inputLink" placeholder="https://..." required>
+            </div>
+
+            <div class="grup">
+                <label>Deskripsi *</label>
+                <textarea id="inputDeskripsi" placeholder="Jelaskan isi file..." required></textarea>
+            </div>
+
+            <button id="btnSimpan">✅ Publikasikan Baru</button>
+            <button id="btnBatalEdit" class="tombol-batal" style="display:none;">❌ Batal Edit</button>
+
+            <h2>📋 File yang Sudah Anda Unggah</h2>
+            <div class="daftar-saya" id="daftarUnggahan"></div>
+
+            <div class="nav-bawah">
+                <a href="beranda.html">🔙 Lihat Semua Koleksi</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variabel Utama
+        let fotoBase64 = "";
+        let daftarData = [];
+        let daftarAkun = [];
+        let akunAktif = null;
+
+        // Elemen HTML
+        const halamanAkun = document.getElementById('halamanAkun');
+        const halamanUnggah = document.getElementById('halamanUnggah');
+        const formLogin = document.getElementById('formLogin');
+        const formDaftar = document.getElementById('formDaftar');
+        const namaPengguna = document.getElementById('namaPengguna');
+
+        // === FUNGSI BANTU ===
+        function bacaSemuaData() {
+            try { daftarAkun = JSON.parse(localStorage.getItem('mcAkun') || '[]'); } catch { daftarAkun = []; }
+            try { daftarData = JSON.parse(localStorage.getItem('mcKoleksi') || '[]'); } catch { daftarData = []; }
+        }
+        function simpanAkun() { localStorage.setItem('mcAkun', JSON.stringify(daftarAkun)); }
+        function simpanData() { localStorage.setItem('mcKoleksi', JSON.stringify(daftarData)); }
+        function cekLogin() { return localStorage.getItem('mcAktif') || null; }
+
+        // Tukar tampilan Daftar/Login
+        window.tukarKeDaftar = () => { formLogin.style.display='none'; formDaftar.style.display='block'; }
+        window.tukarKeLogin = () => { formDaftar.style.display='none'; formLogin.style.display='block'; }
+
+        // === SISTEM DAFTAR AKUN ===
+        document.getElementById('btnDaftar').addEventListener('click', () => {
+            const nama = document.getElementById('daftarNama').value.trim();
+            const sandi = document.getElementById('daftarSandi').value.trim();
+
+            if(nama.length < 3 || sandi.length < 4) return alert('⚠️ Nama minimal 3 huruf, sandi minimal 4 huruf!');
+            if(daftarAkun.find(a => a.nama.toLowerCase() === nama.toLowerCase())) return alert('❌ Nama pengguna sudah dipakai!');
+
+            daftarAkun.push({ nama: nama, sandi: sandi });
+            simpanAkun();
+            alert('✅ Akun berhasil dibuat! Silakan masuk.');
+            tukarKeLogin();
+        });
+
+        // === SISTEM LOGIN ===
+        document.getElementById('btnMasuk').addEventListener('click', () => {
+            const nama = document.getElementById('loginNama').value.trim();
+            const sandi = document.getElementById('loginSandi').value.trim();
+
+            const akun = daftarAkun.find(a => a.nama === nama && a.sandi === sandi);
+            if(!akun) return alert('❌ Nama pengguna atau sandi salah!');
+
+            akunAktif = akun.nama;
+            localStorage.setItem('mcAktif', akun.nama);
+            masukBerhasil();
+        });
+
+        // === KELUAR AKUN ===
+        window.keluarAkun = () => {
+            localStorage.removeItem('mcAktif');
+            akunAktif = null;
+            halamanAkun.classList.add('aktif');
+            halamanUnggah.classList.remove('aktif');
+            resetForm();
+        };
+
+        // === JIKA SUDAH BERHASIL MASUK ===
+        function masukBerhasil() {
+            halamanAkun.classList.remove('aktif');
+            halamanUnggah.classList.add('aktif');
+            namaPengguna.textContent = akunAktif;
+            tampilkanDaftarUnggahan();
+        }
+
+        // === FUNGSI KELOLA FILE ===
+        function tampilkanDaftarUnggahan() {
+            const daftarUnggahan = document.getElementById('daftarUnggahan');
+            daftarUnggahan.innerHTML = "";
+            // Hanya tampilkan file milik pengguna yang masuk
+            const fileSaya = daftarData.filter(item => item.pembuat === akunAktif);
+
+            if(fileSaya.length === 0) {
+                daftarUnggahan.innerHTML = "<p style='color:#777; text-align:center;'>Belum ada file yang diunggah</p>";
+                return;
+            }
+            fileSaya.forEach(item => {
+                const el = document.createElement('div');
+                el.className = "item-saya";
+                el.innerHTML = `
+                    <div class="info-saya">
+                        <h4>${item.nama}</h4>
+                        <p>${item.deskripsi.substring(0,35)}...</p>
+                    </div>
+                    <div style="display:flex;">
+                        <button class="tombol-kecil tombol-edit" onclick="mulaiEdit(${item.id})">Ubah</button>
+                        <button class="tombol-kecil tombol-hapus" onclick="hapusItem(${item.id})">Hapus</button>
+                    </div>
+                `;
+                daftarUnggahan.appendChild(el);
+            });
+        }
+
+        window.mulaiEdit = function(id) {
+            const item = daftarData.find(i => i.id === id && i.pembuat === akunAktif);
+            if(!item) return alert('❌ Bukan file milikmu!');
+
+            document.getElementById('editId').value = id;
+            document.getElementById('inputNama').value = item.nama;
+            document.getElementById('inputLink').value = item.link;
+            document.getElementById('inputDeskripsi').value = item.deskripsi;
+            fotoBase64 = item.foto;
+            document.getElementById('areaFoto').innerHTML = `<img src="${fotoBase64}">`;
+            document.getElementById('btnSimpan').textContent = "💾 Simpan Perubahan";
+            document.getElementById('btnBatalEdit').style.display = "block";
+            window.scrollTo({top:0, behavior:'smooth'});
+        };
+
+        document.getElementById('btnBatalEdit').addEventListener('click', resetForm);
+
+        window.hapusItem = function(id) {
+            if(confirm("Yakin hapus file ini?")) {
+                daftarData = daftarData.filter(i => !(i.id === id && i.pembuat === akunAktif));
+                simpanData();
+                tampilkanDaftarUnggahan();
+                resetForm();
+            }
+        };
+
+        function resetForm() {
+            document.getElementById('editId').value = "";
+            document.getElementById('inputNama').value = "";
+            document.getElementById('inputLink').value = "";
+            document.getElementById('inputDeskripsi').value = "";
+            fotoBase64 = "";
+            document.getElementById('areaFoto').innerHTML = "Klik untuk pilih foto";
+            document.getElementById('btnSimpan').textContent = "✅ Publikasikan Baru";
+            document.getElementById('btnBatalEdit').style.display = "none";
+        }
+
+        // Pilih Foto
+        document.getElementById('areaFoto').addEventListener('click', () => document.getElementById('inputFoto').click());
+        document.getElementById('inputFoto').addEventListener('change', e => {
+            const f = e.target.files[0];
+            if(!f) return;
+            const baca = new FileReader();
+            baca.onload = ev => {
+                fotoBase64 = ev.target.result;
+                document.getElementById('areaFoto').innerHTML = `<img src="${fotoBase64}">`;
+            };
+            baca.readAsDataURL(f);
+        });
+
+        // Simpan File Baru / Perbarui
+        document.getElementById('btnSimpan').addEventListener('click', () => {
+            const nama = document.getElementById('inputNama').value.trim();
+            const link = document.getElementById('inputLink').value.trim();
+            const deskripsi = document.getElementById('inputDeskripsi').value.trim();
+            const editId = document.getElementById('editId').value;
+
+            if(!nama || !link || !deskripsi || !fotoBase64) return alert('⚠️ Lengkapi semua data!');
+
+            if(editId !== "") {
+                const idx = daftarData.findIndex(i => i.id == editId && i.pembuat === akunAktif);
+                if(idx === -1) return alert('❌ Tidak dapat mengubah file orang lain!');
+                daftarData[idx].nama = nama;
+                daftarData[idx].link = link;
+                daftarData[idx].deskripsi = deskripsi;
+                daftarData[idx].foto = fotoBase64;
+                alert('✅ Perubahan disimpan!');
+            } else {
+                daftarData.unshift({
+                    id: Date.now(), nama: nama, link: link, deskripsi: deskripsi,
+                    foto: fotoBase64, ulasan: [], pembuat: akunAktif
+                });
+                alert('✅ File berhasil dipublikasikan!');
+            }
+            simpanData();
+            resetForm();
+            tampilkanDaftarUnggahan();
+        });
+
+        // SAAT HALAMAN DIBUKA
+        bacaSemuaData();
+        const penggunaSaatIni = cekLogin();
+        if(penggunaSaatIni) {
+            akunAktif = penggunaSaatIni;
+            masukBerhasil();
+        }
+    </script>
+</body>
+</html>
