@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koleksi - FireGameX MC</title>
+    <style>
+        * {margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif;}
+        :root {
+            --merah-terang: #ff1a1a;
+            --merah-gelap: #b71c1c;
+            --hitam: #121212;
+            --abu-gelap: #1e1e1e;
+            --abu-terang: #333333;
+            --putih: #f5f5f5;
+            --teks-abu: #bbbbbb;
+        }
+        body {min-height:100vh; background:var(--hitam); padding:15px 10px;}
+        .atas {text-align:center; color:var(--putih); margin-bottom:20px;}
+        .atas h1 {font-size:30px; margin-bottom:5px; color:var(--merah-terang);}
+        .atas p {opacity:0.8; margin-bottom:15px; color:var(--teks-abu);}
+
+        /* KOTAK PENCARIAN */
+        .kotak-cari {max-width:500px; margin:0 auto 25px; position:relative;}
+        .kotak-cari input {
+            width:100%; padding:13px 20px 13px 45px;
+            border:2px solid var(--abu-terang); border-radius:30px; font-size:15px;
+            background:var(--abu-gelap); color:var(--putih);
+            transition:0.2s;
+        }
+        .kotak-cari input:focus {outline:none; border-color:var(--merah-terang);}
+        .kotak-cari i {
+            position:absolute; left:18px; top:50%; transform:translateY(-50%);
+            color:var(--teks-abu); font-size:18px;
+        }
+
+        .grid {max-width:1100px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:18px;}
+        .kartu {
+            background:var(--abu-gelap); border-radius:12px; overflow:hidden; cursor:pointer; 
+            transition:0.3s; border:2px solid transparent;
+        }
+        .kartu:hover {transform:translateY(-4px); border-color:var(--merah-terang); box-shadow:0 8px 20px rgba(255,26,26,0.2);}
+        .gambar {width:100%; height:170px; object-fit:cover; background:#000;}
+        .isi {padding:14px;}
+        .isi h3 {color:var(--merah-terang); margin-bottom:6px; font-size:17px;}
+        .isi p {color:var(--teks-abu); font-size:14px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; overflow:hidden;}
+        
+        .kosong {color:var(--putih); text-align:center; padding:60px 20px; font-size:17px;}
+        .kosong a {color:var(--merah-terang); font-weight:bold; text-decoration:none;}
+        .pesan-cari {color:var(--putih); text-align:center; padding:40px 20px; display:none;}
+
+        /* Modal */
+        .modal {display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; padding:15px; z-index:999;}
+        .isi-modal {background:var(--abu-gelap); border-radius:15px; max-width:440px; width:100%; padding:22px; position:relative; border:2px solid var(--merah-terang);}
+        .tutup {position:absolute; top:12px; right:18px; font-size:30px; color:var(--teks-abu); cursor:pointer; transition:0.2s;}
+        .tutup:hover {color:var(--merah-terang);}
+        .gambar-modal {width:100%; height:210px; object-fit:cover; border-radius:8px; margin-bottom:12px; border:1px solid var(--abu-terang);}
+        .judul-modal {color:var(--merah-terang); margin-bottom:8px;}
+        .desk-modal {color:var(--teks-abu); margin-bottom:18px; line-height:1.5;}
+        .tombol-baris {display:flex; gap:10px; margin-bottom:20px;}
+        .tombol {flex:1; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px; transition:0.2s;}
+        .unduh {background:var(--merah-terang); color:white;}
+        .unduh:hover {background:var(--merah-gelap);}
+        .ulas {background:var(--abu-terang); color:white; border:2px solid var(--merah-terang);}
+        .ulas:hover {background:var(--merah-terang);}
+        .kotak-ulas {border-top:1px solid var(--abu-terang); padding-top:18px; display:none;}
+        .kotak-ulas h4 {margin-bottom:8px; color:var(--putih);}
+        .kotak-ulas textarea {
+            width:100%; padding:10px; border:1px solid var(--merah-terang); border-radius:6px; 
+            margin-bottom:10px; resize:none; min-height:70px;
+            background:var(--hitam); color:var(--putih);
+        }
+        .kotak-ulas button {width:100%; padding:10px; background:var(--merah-terang); color:white; border:none; border-radius:6px; cursor:pointer; transition:0.2s;}
+        .kotak-ulas button:hover {background:var(--merah-gelap);}
+        .daftar-ulas {margin-top:12px; max-height:140px; overflow-y:auto;}
+        .item-ulas {background:var(--hitam); padding:9px; border-radius:6px; margin-bottom:7px; font-size:14px; color:var(--teks-abu); border-left:3px solid var(--merah-terang);}
+    </style>
+</head>
+<body>
+    <div class="atas">
+        <h1>FGX MCPE</h1>
+        <p>Konten dari Komunitas FireGameXam</p>
+    </div>
+
+    <div class="kotak-cari">
+        <i>🔎</i>
+        <input type="text" id="inputCari" placeholder="Cari nama atau deskripsi file..." autocomplete="off">
+    </div>
+
+    <div class="grid" id="tampilan"></div>
+    <div class="kosong" id="pesanKosong" style="display:none;">
+        Tidak menemukan konten<br><a href="unggah.html">Klik di sini untuk unggah yang pertama!</a>
+    </div>
+    <div class="pesan-cari" id="tidakDitemukan">
+        Yang kamu cari tidak ditemukan
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="isi-modal">
+            <span class="tutup" id="tombolTutup">&times;</span>
+            <img class="gambar-modal" id="gambarModal">
+            <h2 class="judul-modal" id="judulModal"></h2>
+            <p class="desk-modal" id="deskModal"></p>
+            <div class="tombol-baris">
+                <button class="tombol unduh" id="btnUnduh">Download</button>
+                <button class="tombol ulas" id="btnBukaUlas">Ulasan</button>
+            </div>
+            <div class="kotak-ulas" id="areaUlas">
+                <h4>Tulis Ulasan:</h4>
+                <textarea id="inputUlas" placeholder="Bagaimana menurutmu?"></textarea>
+                <button id="btnKirimUlas">Kirim Ulasan</button>
+                <div class="daftar-ulas" id="daftarUlasan"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dataPilih = null;
+        let daftarData = [];
+
+        try {
+            const mentah = localStorage.getItem('mcKoleksi');
+            daftarData = mentah ? JSON.parse(mentah) : [];
+        } catch {
+            localStorage.removeItem('mcKoleksi');
+            daftarData = [];
+        }
+
+        const tampilan = document.getElementById('tampilan');
+        const pesanKosong = document.getElementById('pesanKosong');
+        const tidakDitemukan = document.getElementById('tidakDitemukan');
+        const inputCari = document.getElementById('inputCari');
+        const modal = document.getElementById('modal');
+
+        function muatKonten(kataKunci = "") {
+            tampilan.innerHTML = "";
+            pesanKosong.style.display = "none";
+            tidakDitemukan.style.display = "none";
+
+            let hasil = daftarData;
+            if(kataKunci.trim() !== "") {
+                const kunci = kataKunci.toLowerCase();
+                hasil = daftarData.filter(item => 
+                    item.nama.toLowerCase().includes(kunci) || 
+                    item.deskripsi.toLowerCase().includes(kunci)
+                );
+            }
+
+            if(daftarData.length === 0) {
+                tampilan.style.display = "none";
+                pesanKosong.style.display = "block";
+                return;
+            }
+
+            if(hasil.length === 0) {
+                tampilan.style.display = "none";
+                tidakDitemukan.style.display = "block";
+                return;
+            }
+
+            tampilan.style.display = "grid";
+            hasil.forEach(item => {
+                const kartu = document.createElement('div');
+                kartu.className = 'kartu';
+                kartu.innerHTML = `
+                    <img src="${item.foto}" class="gambar">
+                    <div class="isi">
+                        <h3>${item.nama}</h3>
+                        <p>${item.deskripsi}</p>
+                    </div>
+                `;
+                kartu.addEventListener('click', () => bukaDetail(item));
+                tampilan.appendChild(kartu);
+            });
+        }
+
+        inputCari.addEventListener('input', e => {
+            muatKonten(e.target.value);
+        });
+
+        function bukaDetail(item) {
+            dataPilih = item;
+            document.getElementById('gambarModal').src = item.foto;
+            document.getElementById('judulModal').textContent = item.nama;
+            document.getElementById('deskModal').textContent = item.deskripsi;
+            document.getElementById('areaUlas').style.display = 'none';
+            tampilkanUlasan();
+            modal.style.display = 'flex';
+        }
+
+        function tampilkanUlasan() {
+            const wadah = document.getElementById('daftarUlasan');
+            wadah.innerHTML = dataPilih.ulasan.length === 0 
+                ? '<p style="color:#888;">Belum ada ulasan</p>' 
+                : dataPilih.ulasan.map(u => `<div class="item-ulas">${u}</div>`).join('');
+        }
+
+        document.getElementById('tombolTutup').onclick = () => modal.style.display = 'none';
+        modal.onclick = e => {if(e.target === modal) modal.style.display = 'none'};
+
+        document.getElementById('btnUnduh').onclick = () => {
+            if(dataPilih?.link) window.open(dataPilih.link, '_blank');
+            else alert('Tautan tidak tersedia!');
+        };
+
+        document.getElementById('btnBukaUlas').onclick = () => {
+            const area = document.getElementById('areaUlas');
+            area.style.display = area.style.display === 'none' ? 'block' : 'none';
+        };
+
+        document.getElementById('btnKirimUlas').onclick = () => {
+            const teks = document.getElementById('inputUlas').value.trim();
+            if(!teks) return alert('Tulis ulasan dulu!');
+            const idx = daftarData.findIndex(i => i.id === dataPilih.id);
+            daftarData[idx].ulasan.push(teks);
+            localStorage.setItem('mcKoleksi', JSON.stringify(daftarData));
+            dataPilih.ulasan.push(teks);
+            document.getElementById('inputUlas').value = '';
+            tampilkanUlasan();
+            alert('✅ Ulasan terkirim!');
+        };
+
+        muatKonten();
+    </script>
+</body>
+</html>
