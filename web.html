@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FireGamerX FGX - Remote System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#ff4500',
+                        secondary: '#1a1a2e',
+                        dark: '#0f0f1a',
+                        light: '#e0e0e0',
+                        accent: '#ff9500',
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', 'Roboto', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .bg-blur {
+                backdrop-filter: blur(8px);
+            }
+            .text-shadow {
+                text-shadow: 0 0 8px rgba(255, 69, 0, 0.6);
+            }
+            .glow {
+                box-shadow: 0 0 15px rgba(255, 69, 0, 0.5);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark text-light min-h-screen font-sans">
+    <!-- Layar Login -->
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-dark/95 bg-blur">
+        <div class="w-full max-w-md p-8 bg-secondary/80 rounded-xl border border-primary/30 glow">
+            <div class="text-center mb-8">
+                <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-primary text-shadow">FireGamerX FGX</h1>
+                <p class="text-gray-400 mt-2">Sistem Akses Terproteksi</p>
+            </div>
+            <div class="space-y-4">
+                <div class="relative">
+                    <input type="password" id="password-input" placeholder="Masukkan Kode Akses" 
+                        class="w-full px-4 py-3 bg-dark/70 border border-gray-700 rounded-lg focus:outline-none focus:border-primary text-light">
+                    <i class="fa fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                </div>
+                <button id="login-btn" class="w-full py-3 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02]">
+                    MASUK SISTEM
+                </button>
+                <p id="error-msg" class="text-red-500 text-center hidden">Kode akses salah!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layar Utama -->
+    <div id="main-screen" class="hidden">
+        <!-- Tombol Lokasi Penuh -->
+        <button id="full-location-btn" class="fixed top-4 right-4 z-40 bg-primary/80 hover:bg-primary p-3 rounded-full glow transition-all">
+            <i class="fa fa-map-marker text-xl"></i>
+        </button>
+
+        <!-- Modal Kode Lokasi -->
+        <div id="location-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 bg-blur hidden">
+            <div class="bg-secondary p-6 rounded-xl w-full max-w-md border border-primary/20">
+                <h3 class="text-xl font-bold mb-4 text-primary">Verifikasi Akses Lokasi Penuh</h3>
+                <input type="password" id="location-code" placeholder="Masukkan Kode" 
+                    class="w-full px-4 py-3 mb-4 bg-dark/70 border border-gray-700 rounded-lg focus:outline-none focus:border-primary">
+                <div class="flex gap-3">
+                    <button id="confirm-location" class="flex-1 py-2 bg-primary rounded-lg">Konfirmasi</button>
+                    <button id="close-location" class="flex-1 py-2 bg-gray-700 rounded-lg">Tutup</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Konten Utama -->
+        <div class="container mx-auto px-4 py-8 max-w-4xl">
+            <!-- Frame Video -->
+            <div class="mb-8 rounded-xl overflow-hidden border-2 border-primary/30 glow">
+                <video id="video-player" class="w-full aspect-video bg-black" controls loop autoplay>
+                    <source src="https://example.com/video.mp4" type="video/mp4">
+                    Browser Anda tidak mendukung pemutar video
+                </video>
+            </div>
+
+            <!-- Kode Acak -->
+            <div class="mb-8 text-center p-6 bg-secondary/60 rounded-xl border border-gray-700">
+                <h2 class="text-xl font-semibold mb-3 text-gray-300">Kode Perangkat Anda</h2>
+                <div id="random-code" class="text-3xl font-mono font-bold text-primary tracking-wider text-shadow">
+                    -- -- -- -- -- --
+                </div>
+                <p class="text-sm text-gray-500 mt-2">Bagikan kode ini untuk diakses perangkat lain</p>
+            </div>
+
+            <!-- Tombol Fitur -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Kamera Jarak Jauh -->
+                <div class="bg-secondary/60 p-6 rounded-xl border border-gray-700 hover:border-primary/50 transition-all">
+                    <div class="text-center mb-4">
+                        <i class="fa fa-video-camera text-4xl text-primary mb-2"></i>
+                        <h3 class="text-xl font-semibold">Kamera Jarak Jauh</h3>
+                    </div>
+                    <input type="text" id="remote-camera-code" placeholder="Masukkan Kode Perangkat" 
+                        class="w-full px-3 py-2 mb-4 bg-dark/70 border border-gray-700 rounded-lg focus:outline-none focus:border-primary">
+                    <button class="feature-btn w-full py-3 bg-primary/90 hover:bg-primary rounded-lg transition-all" data-feature="camera">
+                        Sambungkan
+                    </button>
+                </div>
+
+                <!-- Lacak Pengguna -->
+                <div class="bg-secondary/60 p-6 rounded-xl border border-gray-700 hover:border-primary/50 transition-all">
+                    <div class="text-center mb-4">
+                        <i class="fa fa-map-pin text-4xl text-primary mb-2"></i>
+                        <h3 class="text-xl font-semibold">Lacak Pengguna</h3>
+                    </div>
+                    <input type="text" id="tracker-code" placeholder="Masukkan Kode Perangkat" 
+                        class="w-full px-3 py-2 mb-4 bg-dark/70 border border-gray-700 rounded-lg focus:outline-none focus:border-primary">
+                    <div class="mb-4 p-3 bg-dark/50 rounded-lg text-center">
+                        <p class="text-gray-400 text-sm">Jarak:</p>
+                        <p id="distance-display" class="text-xl font-semibold text-accent">-- km</p>
+                    </div>
+                    <button class="feature-btn w-full py-3 bg-primary/90 hover:bg-primary rounded-lg transition-all" data-feature="track">
+                        Lacak
+                    </button>
+                </div>
+
+                <!-- Panggilan Video -->
+                <div class="bg-secondary/60 p-6 rounded-xl border border-gray-700 hover:border-primary/50 transition-all">
+                    <div class="text-center mb-4">
+                        <i class="fa fa-phone text-4xl text-primary mb-2"></i>
+                        <h3 class="text-xl font-semibold">Calling</h3>
+                    </div>
+                    <input type="text" id="call-code" placeholder="Masukkan Kode Perangkat" 
+                        class="w-full px-3 py-2 mb-4 bg-dark/70 border border-gray-700 rounded-lg focus:outline-none focus:border-primary">
+                    <button class="feature-btn w-full py-3 bg-primary/90 hover:bg-primary rounded-lg transition-all" data-feature="call">
+                        Mulai Panggilan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fitur -->
+    <div id="feature-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 bg-blur hidden">
+        <div class="bg-secondary w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl border border-primary/20">
+            <div class="p-6 border-b border-gray-700 flex justify-between items-center">
+                <h3 id="modal-title" class="text-xl font-bold text-primary">Koneksi Perangkat</h3>
+                <button id="close-modal" class="text-gray-400 hover:text-white">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modal-content" class="p-6">
+                <!-- Konten dinamis -->
+                <div class="text-center py-12">
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+                    <p class="text-gray-300">Menghubungkan ke perangkat...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Elemen DOM
+        const loginScreen = document.getElementById('login-screen');
+        const mainScreen = document.getElementById('main-screen');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMsg = document.getElementById('error-msg');
+        const randomCodeEl = document.getElementById('random-code');
+        const featureModal = document.getElementById('feature-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const closeModalBtn = document.getElementById('close-modal');
+        const fullLocationBtn = document.getElementById('full-location-btn');
+        const locationModal = document.getElementById('location-modal');
+        const locationCodeInput = document.getElementById('location-code');
+        const confirmLocationBtn = document.getElementById('confirm-location');
+        const closeLocationBtn = document.getElementById('close-location');
+        const distanceDisplay = document.getElementById('distance-display');
+
+        // Konfigurasi
+        const CORRECT_PASSWORD = "fgxhack";
+        const FULL_LOCATION_CODE = "050512";
+        let fullLocationEnabled = false;
+
+        // Buat kode acak
+        function generateRandomCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code.split('').join(' ');
+        }
+
+        // Inisialisasi kode acak
+        randomCodeEl.textContent = generateRandomCode();
+
+        // Event login
+        loginBtn.addEventListener('click', () => {
+            if (passwordInput.value === CORRECT_PASSWORD) {
+                loginScreen.classList.add('opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    loginScreen.classList.add('hidden');
+                    mainScreen.classList.remove('hidden');
+                    mainScreen.classList.add('animate-fade-in');
+                }, 300);
+            } else {
+                errorMsg.classList.remove('hidden');
+                passwordInput.value = '';
+                setTimeout(() => errorMsg.classList.add('hidden'), 2000);
+            }
+        });
+
+        // Event fitur tombol
+        document.querySelectorAll('.feature-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const feature = btn.dataset.feature;
+                let code = '';
+                
+                switch(feature) {
+                    case 'camera':
+                        code = document.getElementById('remote-camera-code').value;
+                        break;
+                    case 'track':
+                        code = document.getElementById('tracker-code').value;
+                        break;
+                    case 'call':
+                        code = document.getElementById('call-code').value;
+                        break;
+                }
+
+                if (!code) {
+                    alert('Masukkan kode perangkat terlebih dahulu!');
+                    return;
+                }
+
+                // Tampilkan modal koneksi
+                featureModal.classList.remove('hidden');
+                
+                // Simulasi koneksi
+                setTimeout(() => {
+                    switch(feature) {
+                        case 'camera':
+                            modalTitle.textContent = 'Kamera Jarak Jauh';
+                            modalContent.innerHTML = `
+                                <div class="text-center">
+                                    <div class="bg-dark w-full aspect-video rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                                        <video id="remote-video" class="w-full h-full object-cover" autoplay muted></video>
+                                        <p class="text-gray-400" id="camera-status">Menunggu aliran video...</p>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                                        <button class="p-3 bg-dark rounded-lg hover:bg-gray-700"><i class="fa fa-refresh"></i></button>
+                                        <button class="p-3 bg-red-600 rounded-lg hover:bg-red-700"><i class="fa fa-stop"></i></button>
+                                        <button class="p-3 bg-dark rounded-lg hover:bg-gray-700"><i class="fa fa-expand"></i></button>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                            
+                        case 'track':
+                            modalTitle.textContent = 'Lokasi Pengguna';
+                            const distance = Math.floor(Math.random() * 100) + 1;
+                            distanceDisplay.textContent = `${distance} km`;
+                            
+                            modalContent.innerHTML = `
+                                <div class="space-y-4">
+                                    <div class="bg-dark p-4 rounded-lg">
+                                        <h4 class="text-lg font-semibold mb-2">Status Pelacakan</h4>
+                                        <p class="text-gray-300">Perangkat terhubung: <span class="text-primary">${code}</span></p>
+                                        <p class="text-gray-300">Jarak saat ini: <span class="text-accent">${distance} km</span></p>
+                                        <p class="text-gray-300">Akurasi: <span class="text-green-400">± 50m</span></p>
+                                    </div>
+                                    ${fullLocationEnabled ? `
+                                    <div class="bg-dark p-4 rounded-lg h-64 flex items-center justify-center">
+                                        <div class="text-center">
+                                            <i class="fa fa-map text-4xl text-primary mb-2"></i>
+                                            <p>Peta Lokasi Penuh Aktif</p>
+                                            <p class="text-sm text-gray-400">Koordinat tersedia</p>
+                                        </div>
+                                    </div>
+                                    ` : `
+                                    <div class="bg-dark/50 p-4 rounded-lg text-center text-gray-400">
+                                        <p>Lokasi lengkap tersembunyi</p>
+                                        <p class="text-sm">Gunakan tombol di kanan atas untuk mengaktifkan</p>
+                                    </div>
+                                    `}
+                                    <button class="w-full py-2 bg-primary/80 hover:bg-primary rounded-lg">Perbarui Lokasi</button>
+                                </div>
+                            `;
+                            break;
+                            
+                        case 'call':
+                            modalTitle.textContent = 'Panggilan Video';
+                            modalContent.innerHTML = `
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="bg-dark aspect-video rounded-lg flex items-center justify-center relative overflow-hidden">
+                                            <video class="w-full h-full object-cover" autoplay muted></video>
+                                            <span class="absolute top-2 left-2 bg-black/50 text-xs px-2 py-1 rounded">Anda</span>
+                                        </div>
+                                        <div class="bg-dark aspect-video rounded-lg flex items-center justify-center relative overflow-hidden">
+                                            <video class="w-full h-full object-cover" autoplay></video>
+                                            <span class="absolute top-2 left-2 bg-black/50 text-xs px-2 py-1 rounded">Target</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-center gap-4">
+                                        <button class="p-4 bg-red-600 rounded-full hover:bg-red-700">
+                                            <i class="fa fa-phone fa-rotate-180"></i>
+                                        </button>
+                                        <button class="p-4 bg-dark rounded-full hover:bg-gray-700">
+                                            <i class="fa fa-microphone-slash"></i>
+                                        </button>
+                                        <button class="p-4 bg-dark rounded-full hover:bg-gray-700">
+                                            <i class="fa fa-video-camera"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-center text-gray-400">Durasi: 00:00:00</p>
+                                </div>
+                            `;
+                            break;
+                    }
+                }, 1500);
+            });
+        });
+
+        // Tutup modal fitur
+        closeModalBtn.addEventListener('click', () => {
+            featureModal.classList.add('hidden');
+        });
+
+        // Modal lokasi penuh
+        fullLocationBtn.addEventListener('click', () => {
+            locationModal.classList.remove('hidden');
+            locationCodeInput.value = '';
+        });
+
+        confirmLocationBtn.addEventListener('click', () => {
+            if (locationCodeInput.value === FULL_LOCATION_CODE) {
+                fullLocationEnabled = true;
+                locationModal.classList.add('hidden');
+                alert('Akses lokasi penuh telah diaktifkan!');
+            } else {
+                alert('Kode salah!');
+            }
+        });
+
+        closeLocationBtn.addEventListener('click', () => {
+            locationModal.classList.add('hidden');
+        });
+
+        // Tutup modal saat klik di luar
+        window.addEventListener('click', (e) => {
+            if (e.target === featureModal) featureModal.classList.add('hidden');
+            if (e.target === locationModal) locationModal.classList.add('hidden');
+        });
+
+        // Perbarui jarak secara berkala
+        setInterval(() => {
+            if (!featureModal.classList.contains('hidden') && modalTitle.textContent === 'Lokasi Pengguna') {
+                const currentDistance = parseInt(distanceDisplay.textContent);
+                const newDistance = Math.max(1, currentDistance + Math.floor(Math.random() * 5) - 2);
+                distanceDisplay.textContent = `${newDistance} km`;
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
