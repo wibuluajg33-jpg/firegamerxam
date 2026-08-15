@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📡 Pantau Kamera Jarak Jauh</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; min-height: 100vh; padding: 20px; }
+        .container { max-width: 800px; margin: auto; text-align: center; }
+        h1 { margin: 20px 0; font-size: 22px; color: #00f5d4; }
+        .panel { background: rgba(255,255,255,0.1); border-radius: 16px; padding: 20px; margin: 15px 0; backdrop-filter: blur(10px); }
+        video { width: 100%; border-radius: 12px; background: #000; margin: 15px 0; border: 3px solid #00f5d4; }
+        input, button { padding: 12px; border-radius: 8px; border: none; font-size: 16px; margin: 8px; }
+        input { width: 70%; background: rgba(255,255,255,0.9); color: #000; }
+        button { background: #00f5d4; color: #000; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #00c4a7; transform: scale(1.03); }
+        .kode { font-size: 28px; font-weight: bold; color: #ffd700; margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 2px solid #ffd700; }
+        .status { padding: 12px; border-radius: 8px; margin: 10px 0; font-weight: 500; }
+        .status.menunggu { background: rgba(255,193,7,0.15); border: 1px solid #ffc107; color: #ffd700; }
+        .status.tersambung { background: rgba(40,167,69,0.2); border: 1px solid #28a745; color: #4cd964; }
+        .status.error { background: rgba(255,0,0,0.2); border: 1px solid #ff4444; color: #ff6b6b; }
+        .mode { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        .mode button { background: #e94560; color: #fff; }
+        .mode button.active { background: #00f5d4; color: #000; }
+        .info { font-size: 14px; opacity: 0.8; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📡 PEMANTAU KAMERA JARAK JAUH</h1>
+
+        <div class="panel mode">
+            <button id="btnPemancar" class="active">📹 HP Teman (Pemancar)</button>
+            <button id="btnPenerima">👁️ HP Saya (Penerima)</button>
+        </div>
+
+        <!-- PANEL PEMANCAR: KODE LANGSUNG TAMPIL -->
+        <div id="panelPemancar" class="panel">
+            <h3>🔑 KODE UNIK KAMU:</h3>
+            <!-- Kode dibuat & ditampilkan LANGSUNG di sini -->
+            <div id="idTeman" class="kode">MEMUAT...</div>
+            <div id="statusPemancar" class="status menunggu">⏳ Menunggu teman terhubung...</div>
+            <video id="videoLokal" autoplay playsinline muted></video>
+            <div class="info">
+                ✅ Izinkan Kamera | 🔗 Berikan Kode ke Teman
+            </div>
+        </div>
+
+        <!-- PANEL PENERIMA -->
+        <div id="panelPenerima" class="panel" style="display:none;">
+            <h3>🔗 MASUKKAN KODE TEMAN:</h3>
+            <input type="text" id="inputKode" placeholder="Salin kode di sini...">
+            <button id="btnHubungkan">🔴 HUBUNGKAN SEKARANG</button>
+            <div id="statusPenerima" class="status menunggu">📝 Masukkan kode lalu klik tombol</div>
+            <video id="videoJauh" autoplay playsinline></video>
+        </div>
+    </div>
+
+    <script>
+        // Elemen
+        const btnPemancar = document.getElementById('btnPemancar');
+        const btnPenerima = document.getElementById('btnPenerima');
+        const panelPemancar = document.getElementById('panelPemancar');
+        const panelPenerima = document.getElementById('panelPenerima');
+        const idTeman = document.getElementById('idTeman');
+        const statusPemancar = document.getElementById('statusPemancar');
+        const statusPenerima = document.getElementById('statusPenerima');
+        const videoLokal = document.getElementById('videoLokal');
+        const videoJauh = document.getElementById('videoJauh');
+        const inputKode = document.getElementById('inputKode');
+        const btnHubungkan = document.getElementById('btnHubungkan');
+
+        let peer;
+        let streamLokal;
+
+        // 🔧 KONFIGURASI: Kode dibuat lokal dulu, server cadangan
+        const configPeer = {
+            host: 'peerjs-server.herokuapp.com',
+            port: 443,
+            path: '/',
+            debug: 0,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' }
+                ]
+            }
+        };
+
+        // Pilih Mode
+        btnPemancar.addEventListener('click', () => {
+            gantiMode(true);
+        });
+        btnPenerima.addEventListener('click', () => {
+            gantiMode(false);
+        });
+
+        function gantiMode(isPemancar) {
+            if(isPemancar) {
+                btnPemancar.classList.add('active');
+                btnPenerima.classList.remove('active');
+                panelPemancar.style.display = 'block';
+                panelPenerima.style.display = 'none';
+            } else {
+                btnPemancar.classList.remove('active');
+                btnPenerima.classList.add('active');
+                panelPemancar.style.display = 'none';
+                panelPenerima.style.display = 'block';
+            }
+        }
+
+        // ✅ FUNGSI PEMANCAR: Kode DITAMPILKAN DULU
+        async function mulaiPemancar() {
+            // 1. Buat ID Kode LANGSUNG & TAMPILKAN (tanpa menunggu server)
+            const idCepat = buatKodeAcak(8);
+            idTeman.textContent = idCepat;
+
+            try {
+                // 2. Aktifkan Kamera
+                streamLokal = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: 1280, height: 720 }, 
+                    audio: false 
+                });
+                videoLokal.srcObject = streamLokal;
+
+                // 3. Sambung ke Server dengan ID yang sudah kita buat
+                peer = new Peer(idCepat, configPeer);
+
+                peer.on('open', () => {
+                    statusPemancar.textContent = '✅ Kode Siap! Menunggu teman...';
+                });
+
+                // 🔑 KETIKA ADA YANG TERHUBUNG: UBAH STATUS
+                peer.on('connection', conn => {
+                    statusPemancar.textContent = '🟢 TERHUBUNG! Kamera sedang disiarkan';
+                    statusPemancar.className = 'status tersambung';
+                });
+
+                peer.on('call', call => {
+                    call.answer(streamLokal);
+                    call.on('stream', stream => {
+                        statusPemancar.textContent = '🟢 TERHUBUNG! Sedang mengirim gambar...';
+                        statusPemancar.className = 'status tersambung';
+                    });
+                });
+
+                peer.on('error', err => {
+                    statusPemancar.textContent = '⚠️ Kode Tetap Bisa Dipakai! (Koneksi Sedang Memperbaiki)';
+                });
+
+            } catch (err) {
+                idTeman.textContent = '❌ Kamera Ditolak';
+                statusPemancar.textContent = 'Izinkan Kamera di Pengaturan';
+                statusPemancar.className = 'status error';
+            }
+        }
+
+        // 🔗 PENERIMA: Sambung ke Kode Teman
+        function hubungkanKeTeman(kodeTeman) {
+            statusPenerima.textContent = '🔄 Menghubungkan ke kode: ' + kodeTeman;
+            statusPenerima.className = 'status menunggu';
+            
+            peer = new Peer(configPeer);
+            
+            peer.on('open', () => {
+                const panggilan = peer.call(kodeTeman, null);
+                panggilan.on('stream', stream => {
+                    videoJauh.srcObject = stream;
+                    statusPenerima.textContent = '🟢 BERHASIL TERHUBUNG! Melihat kamera teman';
+                    statusPenerima.className = 'status tersambung';
+                });
+                panggilan.on('error', () => {
+                    statusPenerima.textContent = '❌ Kode Salah atau Teman Belum Siap';
+                    statusPenerima.className = 'status error';
+                });
+            });
+
+            peer.on('error', () => {
+                statusPenerima.textContent = '❌ Tidak Dapat Menghubungkan. Cek Internet/Kode';
+                statusPenerima.className = 'status error';
+            });
+        }
+
+        // Buat Kode Angka Unik Sendiri (Cepat)
+        function buatKodeAcak(panjang) {
+            let kode = '';
+            const angka = '0123456789';
+            for (let i = 0; i < panjang; i++) {
+                kode += angka[Math.floor(Math.random() * angka.length)];
+            }
+            return kode;
+        }
+
+        btnHubungkan.addEventListener('click', () => {
+            const kode = inputKode.value.trim();
+            if (kode.length >= 4) {
+                hubungkanKeTeman(kode);
+            } else {
+                statusPenerima.textContent = '⚠️ Masukkan Kode yang Benar!';
+                statusPenerima.className = 'status error';
+            }
+        });
+
+        // MULAI OTOMATIS: Kode langsung muncul
+        mulaiPemancar();
+    </script>
+</body>
+</html>
