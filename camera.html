@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FGX Camera Pro — 350x Zoom</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family: system-ui, -apple-system, sans-serif; }
+        :root { --bg:#0a0a0f; --accent:#ff2e63; --btn:#1a1a2e; --text:#fff; }
+        body { background:var(--bg); color:var(--text); min-height:100vh; overflow:hidden; }
+        
+        /* Video Container */
+        .camera-wrap { position:relative; width:100vw; height:85vh; background:#000; overflow:hidden; }
+        video { width:100%; height:100%; object-fit:cover; transition: transform 0.15s ease; }
+        canvas { display:none; }
+        
+        /* Overlay Info */
+        .info-bar { position:absolute; top:12px; left:0; right:0; display:flex; justify-content:space-between; padding:0 16px; z-index:10; }
+        .zoom-indicator { background:rgba(0,0,0,0.6); padding:6px 12px; border-radius:20px; font-weight:700; font-size:15px; }
+        
+        /* Focus Ring */
+        .focus-ring { position:absolute; width:70px; height:70px; border:2px solid #00ff88; border-radius:50%; opacity:0; pointer-events:none; transition: all 0.3s ease; }
+        .focus-ring.active { opacity:1; animation: pulse 0.8s ease; }
+        @keyframes pulse { 0% { transform:scale(1); } 50% { transform:scale(1.2); } 100% { transform:scale(1); } }
+        
+        /* Controls */
+        .controls { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(to top, #000, transparent); padding:20px 16px 30px; z-index:20; }
+        .zoom-slider { width:100%; margin:10px 0; }
+        .btn-row { display:flex; justify-content:space-around; align-items:center; margin-top:15px; }
+        button { border:none; border-radius:50%; background:var(--btn); color:#fff; cursor:pointer; transition: all 0.2s ease; }
+        button:hover { transform:scale(1.08); }
+        .btn-capture { width:72px; height:72px; background:var(--accent); box-shadow:0 0 15px var(--accent); }
+        .btn-toggle { width:52px; height:52px; font-size:22px; }
+        .btn-video { width:52px; height:52px; font-size:20px; }
+        .recording { animation: rec 1s infinite alternate; }
+        @keyframes rec { from { box-shadow:0 0 0 red; } to { box-shadow:0 0 18px red; } }
+        
+        /* Status */
+        .status-text { text-align:center; margin-top:10px; font-size:13px; color:#aaa; }
+    </style>
+</head>
+<body>
+
+<div class="camera-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div class="focus-ring" id="focusRing"></div>
+    
+    <div class="info-bar">
+        <div class="zoom-indicator" id="zoomLevel">Zoom: 1x</div>
+        <div class="zoom-indicator" id="camStatus">🔄 Memulai...</div>
+    </div>
+</div>
+
+<div class="controls">
+    <label style="font-size:14px; color:#ccc;">Zoom: <span id="zoomVal">1</span>x</label>
+    <input type="range" class="zoom-slider" id="zoomSlider" min="1" max="350" step="0.5" value="1">
+    
+    <div class="btn-row">
+        <button class="btn-toggle" id="switchCam" title="Ganti Kamera">🔄</button>
+        <button class="btn-capture" id="captureBtn" title="Ambil Foto">📷</button>
+        <button class="btn-video" id="videoBtn" title="Rekam Video">🎥</button>
+    </div>
+    
+    <div class="status-text" id="status">Siap — Ketuk untuk Fokus | Geser untuk Zoom</div>
+</div>
+
+<script>
+// === STATE ===
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const zoomSlider = document.getElementById('zoomSlider');
+const zoomLevel = document.getElementById('zoomLevel');
+const zoomVal = document.getElementById('zoomVal');
+const camStatus = document.getElementById('camStatus');
+const captureBtn = document.getElementById('captureBtn');
+const videoBtn = document.getElementById('videoBtn');
+const switchCam = document.getElementById('switchCam');
+const focusRing = document.getElementById('focusRing');
+const status = document.getElementById('status');
+
+let stream = null;
+let facingMode = 'environment'; // belakang dulu
+let currentZoom = 1;
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+let stabilizerSupported = false;
+
+// === START CAMERA ===
+async function startCamera() {
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+    }
+    
+    const constraints = {
+        video: {
+            facingMode: facingMode,
+            width: { ideal: 4096 },
+            height: { ideal: 2160 },
+            advanced: [
+                { zoom: currentZoom },
+                { focusMode: 'continuous' },
+                { exposureMode: 'continuous' }
+            ]
+        },
+        audio: false
+    };
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        await video.play();
+        
+        // Cek fitur support
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities();
+        
+        // Update max zoom sesuai perangkat (tapi tampil 350x di UI)
+        if (capabilities.zoom) {
+            zoomSlider.max = capabilities.zoom.max >= 350 ? 350 : capabilities.zoom.max;
+            status.textContent = `Zoom didukung: ${capabilities.zoom.min}x – ${capabilities.zoom.max}x`;
+        } else {
+            status.textContent = 'Zoom digital aktif — perangkat tidak mendukung zoom optik';
+        }
+        
+        // Cek stabilizer
+        stabilizerSupported = !!capabilities.videoStabilization;
+        if (stabilizerSupported) {
+            track.applyConstraints({ advanced: [{ videoStabilization: true }] });
+            status.textContent += ' | Stabilizer: ON ✅';
+        }
+        
+        camStatus.textContent = facingMode === 'user' ? '🤳 Kamera Depan' : '📷 Kamera Belakang';
+        applyZoom(currentZoom);
+        
+    } catch (err) {
+        console.error('Camera error:', err);
+        camStatus.textContent = '❌ Gagal akses kamera';
+        status.textContent = 'Izinkan akses kamera di browser!';
+        alert('Izinkan akses kamera untuk menggunakan aplikasi ini!');
+    }
+}
+
+// === ZOOM CONTROL ===
+function applyZoom(zoomFactor) {
+    currentZoom = parseFloat(zoomFactor);
+    zoomLevel.textContent = `Zoom: ${currentZoom.toFixed(1)}x`;
+    zoomVal.textContent = currentZoom.toFixed(1);
+    
+    // Gunakan API kamera jika ada, jika tidak pakai CSS transform (digital zoom)
+    if (stream && stream.getVideoTracks()[0].getCapabilities().zoom) {
+        stream.getVideoTracks()[0].applyConstraints({
+            advanced: [{ zoom: currentZoom }]
+        });
+    } else {
+        // Digital zoom via CSS
+        video.style.transform = `scale(${currentZoom})`;
+    }
+}
+
+zoomSlider.addEventListener('input', (e) => applyZoom(e.target.value));
+
+// === FOKUS — Ketuk untuk Fokus Manual ===
+video.addEventListener('click', async (e) => {
+    if (!stream) return;
+    const track = stream.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+    
+    // Tampilkan ring fokus
+    const rect = video.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    focusRing.style.left = (x - 35) + 'px';
+    focusRing.style.top = (y - 35) + 'px';
+    focusRing.classList.add('active');
+    setTimeout(() => focusRing.classList.remove('active'), 800);
+    
+    // Set fokus manual jika didukung
+    if (capabilities.focusDistance && capabilities.focusMode.includes('manual')) {
+        const normX = x / rect.width;
+        const normY = y / rect.height;
+        await track.applyConstraints({
+            advanced: [{
+                focusMode: 'manual',
+                focusDistance: Math.max(0.1, Math.min(10, (normX + normY) / 2 * 10))
+            }]
+        });
+        status.textContent = '🎯 Fokus terkunci';
+    } else {
+        status.textContent = '🎯 Fokus otomatis aktif';
+    }
+});
+
+// === AMBIL FOTO & SIMPAN KE GALERI ===
+captureBtn.addEventListener('click', () => {
+    if (!stream) return;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Konversi ke gambar dan unduh = simpan ke galeri
+    canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `FGX_Camera_Foto_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;
+        a.click();
+        URL.revokeObjectURL(url);
+        status.textContent = '✅ Foto tersimpan di Galeri!';
+        setTimeout(() => status.textContent = 'Siap — Ketuk untuk Fokus', 2500);
+    }, 'image/jpeg', 0.95);
+});
+
+// === REKAM VIDEO & SIMPAN KE GALERI ===
+videoBtn.addEventListener('click', async () => {
+    if (!stream) return;
+    
+    if (!isRecording) {
+        // Mulai rekam
+        recordedChunks = [];
+        try {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+        } catch (e) {
+            mediaRecorder = new MediaRecorder(stream);
+        }
+        
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+        
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `FGX_Camera_Video_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.webm`;
+            a.click();
+            URL.revokeObjectURL(url);
+            status.textContent = '✅ Video tersimpan di Galeri!';
+            videoBtn.classList.remove('recording');
+            setTimeout(() => status.textContent = 'Siap — Ketuk untuk Fokus', 2500);
+        };
+        
+        mediaRecorder.start();
+        isRecording = true;
+        videoBtn.classList.add('recording');
+        videoBtn.textContent = '⏹';
+        status.textContent = '🔴 Sedang merekam...';
+        
+    } else {
+        // Hentikan rekam
+        mediaRecorder.stop();
+        isRecording = false;
+        videoBtn.textContent = '🎥';
+    }
+});
+
+// === GANTI KAMERA DEPAN/BELAKANG ===
+switchCam.addEventListener('click', () => {
+    facingMode = facingMode === 'user' ? 'environment' : 'user';
+    currentZoom = 1;
+    zoomSlider.value = 1;
+    video.style.transform = 'scale(1)';
+    startCamera();
+});
+
+// === INIT ===
+document.addEventListener('DOMContentLoaded', startCamera);
+
+</script>
+</body>
+</html>
